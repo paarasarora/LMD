@@ -13,15 +13,13 @@ class register(APIView):
         if User.objects.filter(username = username).last():
             raise ValidationError({'message':['already exists']})
         if request.POST.get('user_type') is None:
-            raise ValidationError({'message':['user_type cannot be null']})
+            raise ValidationError({'message':['user_type cannot be empty']})
         user_type = request.POST.get('user_type')
         user = User(username = username,user_type = user_type)
         password = request.data['password']
         user.set_password(password)
         refresh = RefreshToken.for_user(user)
         user.save()
-        # name = User.objects.filter(username = username).last()
-
         return Response({'message': 'success my nigga',
         'user_id': user.id,
         'user_type':user.user_type,
