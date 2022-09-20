@@ -5,7 +5,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import api_view
 # Create your views here.
 
 class BooksViewSet(ModelViewSet):
@@ -26,11 +25,9 @@ class BooksViewSet(ModelViewSet):
         user = request.user
         if user.user_type == "FACULTY":
             book_fk = Members.objects.filter(book = obj.id).last()
-            if not book_fk:
-                print(obj)  
+            if not book_fk:  
                 obj.delete()
             else:
-                print(obj.name)
                 book_fk.book = None
                 book_fk.save()
                 obj.delete()
