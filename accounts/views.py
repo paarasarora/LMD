@@ -20,7 +20,7 @@ class register(APIView):
         user.set_password(password)
         refresh = RefreshToken.for_user(user)
         user.save()
-        return Response({'message': 'success my nigga',
+        return Response({'message': 'success',
         'user_id': user.id,
         'user_type':user.user_type,
         'refresh': str(refresh),

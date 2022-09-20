@@ -25,7 +25,15 @@ class BooksViewSet(ModelViewSet):
         obj = self.get_object()
         user = request.user
         if user.user_type == "FACULTY":
-            obj.delete()  
+            book_fk = Members.objects.filter(book = obj.id).last()
+            if not book_fk:
+                print(obj)  
+                obj.delete()
+            else:
+                print(obj.name)
+                book_fk.book = None
+                book_fk.save()
+                obj.delete()
             return Response({'message':'Book deleted'},status = status.HTTP_204_NO_CONTENT)
         raise ValidationError({'message':'only librarian can delete a book'})
     def update(self,request,*args, **kwargs):
@@ -46,13 +54,16 @@ class MembersViewSet(ModelViewSet):
     def create(self,request,*args,**kwargs):
             user = request.user
             if user.user_type == "FACULTY":
-                obj = self.queryset.filter(user = request.data.get('user')).last()
-                if not obj:
+                user_obj = self.queryset.filter(user = request.data.get('user')).last()
+                if not user_obj:
                     obj = self.queryset.filter(book =request.data.get('book')).last()
                     if not obj:
                         serializer = self.get_serializer(data=request.data)
                         serializer.is_valid(raise_exception=True)
                         self.perform_create(serializer)   
+                        book_obj = Books.objects.filter(id = request.data.get('book')).last()
+                        book_obj.status = 'BORROWED'
+                        book_obj.save()
                         return Response(serializer.data,status = status.HTTP_201_CREATED)
                     raise ValidationError({'message':'book already borrowed'})
                 raise ValidationError({'message':'user already exists'})
@@ -70,7 +81,29 @@ class MembersViewSet(ModelViewSet):
         user = request.user
         obj = self.get_object()
         if user.user_type == "FACULTY":
-            # if request.data.get('')
+            serializer = self.get_serializer(obj,data = request.data,partial = True)
+            serializer.is_valid(raise_exception = True)
+            serializer.save()
+            return Response(serializer.data)
+        if user.user_type == 'STUDENT':
+            obj_book = Books.objects.filter(id = request.data.get('book')).last()
+            if obj_book:
+                print(obj_book.status)
+                if obj_book.status == 'AVAILABLE':
+                    if request.data.get('book') and obj_book.status == 'AVAILABLE':
+                        obj_book.status = 'BORROWED'
+                        obj_book.save()
+                        if obj.book:
+                            obj.book.status = 'AVAILABLE'
+                            obj.book.save()
+                else:
+                    raise ValidationError({'message':'borrowed book cannot be reissued'})
+            else:
+                if obj.book:
+                    obj.book.status = 'AVAILABLE'
+                    obj.book.save()
+                    obj.book = None
+            
             serializer = self.get_serializer(obj,data = request.data,partial = True)
             serializer.is_valid(raise_exception = True)
             serializer.save()
